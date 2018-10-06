@@ -191,6 +191,10 @@ class RTIMUSettings : public RTIMUHal
 {
 public:
 
+    RTIMUSettings(const char *filedir, bool dummy);
+
+    virtual bool loadSettings(bool dummy);
+
     //  Standard constructor sets up for ini file in working directory
 
     RTIMUSettings(const char *productType = "RTIMULib");

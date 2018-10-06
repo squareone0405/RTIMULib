@@ -43,6 +43,321 @@
 
 #define RATE_TIMER_INTERVAL 2
 
+RTIMUSettings::RTIMUSettings(const char *filedir, bool dummy){
+    sprintf(m_filename, "%s", filedir);
+    loadSettings(dummy);
+}
+
+bool RTIMUSettings::loadSettings(bool dummy){
+    char buf[200];
+    char key[200];
+    char val[200];
+    RTFLOAT ftemp;
+    //  check to see if settings file exists
+
+    if (!(m_fd = fopen(m_filename, "r"))) {
+        HAL_INFO("Settings file not found. Using defaults and creating settings file\n");
+        return saveSettings();
+    }
+
+    while (fgets(buf, 200, m_fd)) {
+        if ((buf[0] == '#') || (buf[0] == ' ') || (buf[0] == '\n'))
+            // just a comment
+            continue;
+
+        if (sscanf(buf, "%[^=]=%s", key, val) != 2) {
+            HAL_ERROR1("Bad line in settings file: %s\n", buf);
+            fclose(m_fd);
+            return false;
+        }
+
+        //  now decode keys
+
+        //  general config
+
+        if (strcmp(key, RTIMULIB_IMU_TYPE) == 0) {
+            m_imuType = atoi(val);
+        } else if (strcmp(key, RTIMULIB_FUSION_TYPE) == 0) {
+            m_fusionType = atoi(val);
+        } else if (strcmp(key, RTIMULIB_BUS_IS_I2C) == 0) {
+            m_busIsI2C = strcmp(val, "true") == 0;
+        } else if (strcmp(key, RTIMULIB_I2C_BUS) == 0) {
+            m_I2CBus = atoi(val);
+        } else if (strcmp(key, RTIMULIB_SPI_BUS) == 0) {
+            m_SPIBus = atoi(val);
+        } else if (strcmp(key, RTIMULIB_SPI_SELECT) == 0) {
+            m_SPISelect = atoi(val);
+        } else if (strcmp(key, RTIMULIB_SPI_SPEED) == 0) {
+            m_SPISpeed = atoi(val);
+        } else if (strcmp(key, RTIMULIB_I2C_SLAVEADDRESS) == 0) {
+            m_I2CSlaveAddress = atoi(val);
+        } else if (strcmp(key, RTIMULIB_AXIS_ROTATION) == 0) {
+            m_axisRotation = atoi(val);
+        } else if (strcmp(key, RTIMULIB_PRESSURE_TYPE) == 0) {
+            m_pressureType = atoi(val);
+        } else if (strcmp(key, RTIMULIB_I2C_PRESSUREADDRESS) == 0) {
+            m_I2CPressureAddress = atoi(val);
+        } else if (strcmp(key, RTIMULIB_HUMIDITY_TYPE) == 0) {
+            m_humidityType = atoi(val);
+        } else if (strcmp(key, RTIMULIB_I2C_HUMIDITYADDRESS) == 0) {
+            m_I2CHumidityAddress = atoi(val);
+
+        // compass calibration and adjustment
+
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_VALID) == 0) {
+            m_compassCalValid = strcmp(val, "true") == 0;
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_MINX) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalMin.setX(ftemp);
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_MINY) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalMin.setY(ftemp);
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_MINZ) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalMin.setZ(ftemp);
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_MAXX) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalMax.setX(ftemp);
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_MAXY) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalMax.setY(ftemp);
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_MAXZ) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalMax.setZ(ftemp);
+        } else if (strcmp(key, RTIMULIB_COMPASSADJ_DECLINATION) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassAdjDeclination = ftemp;
+
+        // compass ellipsoid calibration
+
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_ELLIPSOID_VALID) == 0) {
+            m_compassCalEllipsoidValid = strcmp(val, "true") == 0;
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_OFFSET_X) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidOffset.setX(ftemp);
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_OFFSET_Y) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidOffset.setY(ftemp);
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_OFFSET_Z) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidOffset.setZ(ftemp);
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_CORR11) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidCorr[0][0] = ftemp;
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_CORR12) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidCorr[0][1] = ftemp;
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_CORR13) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidCorr[0][2] = ftemp;
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_CORR21) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidCorr[1][0] = ftemp;
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_CORR22) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidCorr[1][1] = ftemp;
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_CORR23) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidCorr[1][2] = ftemp;
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_CORR31) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidCorr[2][0] = ftemp;
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_CORR32) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidCorr[2][1] = ftemp;
+        } else if (strcmp(key, RTIMULIB_COMPASSCAL_CORR33) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_compassCalEllipsoidCorr[2][2] = ftemp;
+
+        // accel calibration
+
+        } else if (strcmp(key, RTIMULIB_ACCELCAL_VALID) == 0) {
+            m_accelCalValid = strcmp(val, "true") == 0;
+        } else if (strcmp(key, RTIMULIB_ACCELCAL_MINX) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_accelCalMin.setX(ftemp);
+        } else if (strcmp(key, RTIMULIB_ACCELCAL_MINY) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_accelCalMin.setY(ftemp);
+        } else if (strcmp(key, RTIMULIB_ACCELCAL_MINZ) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_accelCalMin.setZ(ftemp);
+        } else if (strcmp(key, RTIMULIB_ACCELCAL_MAXX) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_accelCalMax.setX(ftemp);
+        } else if (strcmp(key, RTIMULIB_ACCELCAL_MAXY) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_accelCalMax.setY(ftemp);
+        } else if (strcmp(key, RTIMULIB_ACCELCAL_MAXZ) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_accelCalMax.setZ(ftemp);
+
+            // gyro bias
+
+        } else if (strcmp(key, RTIMULIB_GYRO_BIAS_VALID) == 0) {
+            m_gyroBiasValid = strcmp(val, "true") == 0;
+        } else if (strcmp(key, RTIMULIB_GYRO_BIAS_X) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_gyroBias.setX(ftemp);
+        } else if (strcmp(key, RTIMULIB_GYRO_BIAS_Y) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_gyroBias.setY(ftemp);
+        } else if (strcmp(key, RTIMULIB_GYRO_BIAS_Z) == 0) {
+            sscanf(val, "%f", &ftemp);
+            m_gyroBias.setZ(ftemp);
+
+        //  MPU9150 settings
+
+        } else if (strcmp(key, RTIMULIB_MPU9150_GYROACCEL_SAMPLERATE) == 0) {
+            m_MPU9150GyroAccelSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_MPU9150_COMPASS_SAMPLERATE) == 0) {
+            m_MPU9150CompassSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_MPU9150_GYROACCEL_LPF) == 0) {
+            m_MPU9150GyroAccelLpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_MPU9150_GYRO_FSR) == 0) {
+            m_MPU9150GyroFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_MPU9150_ACCEL_FSR) == 0) {
+            m_MPU9150AccelFsr = atoi(val);
+
+        //  MPU9250 settings
+
+        } else if (strcmp(key, RTIMULIB_MPU9250_GYROACCEL_SAMPLERATE) == 0) {
+            m_MPU9250GyroAccelSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_MPU9250_COMPASS_SAMPLERATE) == 0) {
+            m_MPU9250CompassSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_MPU9250_GYRO_LPF) == 0) {
+            m_MPU9250GyroLpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_MPU9250_ACCEL_LPF) == 0) {
+            m_MPU9250AccelLpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_MPU9250_GYRO_FSR) == 0) {
+            m_MPU9250GyroFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_MPU9250_ACCEL_FSR) == 0) {
+            m_MPU9250AccelFsr = atoi(val);
+
+        //  GD20HM303D settings
+
+        } else if (strcmp(key, RTIMULIB_GD20HM303D_GYRO_SAMPLERATE) == 0) {
+            m_GD20HM303DGyroSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303D_GYRO_FSR) == 0) {
+            m_GD20HM303DGyroFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303D_GYRO_HPF) == 0) {
+            m_GD20HM303DGyroHpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303D_GYRO_BW) == 0) {
+            m_GD20HM303DGyroBW = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303D_ACCEL_SAMPLERATE) == 0) {
+            m_GD20HM303DAccelSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303D_ACCEL_FSR) == 0) {
+            m_GD20HM303DAccelFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303D_ACCEL_LPF) == 0) {
+            m_GD20HM303DAccelLpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303D_COMPASS_SAMPLERATE) == 0) {
+            m_GD20HM303DCompassSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303D_COMPASS_FSR) == 0) {
+            m_GD20HM303DCompassFsr = atoi(val);
+
+        //  GD20M303DLHC settings
+
+        } else if (strcmp(key, RTIMULIB_GD20M303DLHC_GYRO_SAMPLERATE) == 0) {
+            m_GD20M303DLHCGyroSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20M303DLHC_GYRO_FSR) == 0) {
+            m_GD20M303DLHCGyroFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20M303DLHC_GYRO_HPF) == 0) {
+            m_GD20M303DLHCGyroHpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20M303DLHC_GYRO_BW) == 0) {
+            m_GD20M303DLHCGyroBW = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20M303DLHC_ACCEL_SAMPLERATE) == 0) {
+            m_GD20M303DLHCAccelSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20M303DLHC_ACCEL_FSR) == 0) {
+            m_GD20M303DLHCAccelFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20M303DLHC_COMPASS_SAMPLERATE) == 0) {
+            m_GD20M303DLHCCompassSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20M303DLHC_COMPASS_FSR) == 0) {
+            m_GD20M303DLHCCompassFsr = atoi(val);
+
+        //  GD20HM303DLHC settings
+
+         } else if (strcmp(key, RTIMULIB_GD20HM303DLHC_GYRO_SAMPLERATE) == 0) {
+            m_GD20HM303DLHCGyroSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303DLHC_GYRO_FSR) == 0) {
+            m_GD20HM303DLHCGyroFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303DLHC_GYRO_HPF) == 0) {
+            m_GD20HM303DLHCGyroHpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303DLHC_GYRO_BW) == 0) {
+            m_GD20HM303DLHCGyroBW = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303DLHC_ACCEL_SAMPLERATE) == 0) {
+            m_GD20HM303DLHCAccelSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303DLHC_ACCEL_FSR) == 0) {
+            m_GD20HM303DLHCAccelFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303DLHC_COMPASS_SAMPLERATE) == 0) {
+            m_GD20HM303DLHCCompassSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_GD20HM303DLHC_COMPASS_FSR) == 0) {
+            m_GD20HM303DLHCCompassFsr = atoi(val);
+
+        //  LSM9DS0 settings
+
+        } else if (strcmp(key, RTIMULIB_LSM9DS0_GYRO_SAMPLERATE) == 0) {
+            m_LSM9DS0GyroSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS0_GYRO_FSR) == 0) {
+            m_LSM9DS0GyroFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS0_GYRO_HPF) == 0) {
+            m_LSM9DS0GyroHpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS0_GYRO_BW) == 0) {
+            m_LSM9DS0GyroBW = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS0_ACCEL_SAMPLERATE) == 0) {
+            m_LSM9DS0AccelSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS0_ACCEL_FSR) == 0) {
+            m_LSM9DS0AccelFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS0_ACCEL_LPF) == 0) {
+            m_LSM9DS0AccelLpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS0_COMPASS_SAMPLERATE) == 0) {
+            m_LSM9DS0CompassSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS0_COMPASS_FSR) == 0) {
+            m_LSM9DS0CompassFsr = atoi(val);
+
+        //  LSM9DS1 settings
+
+        } else if (strcmp(key, RTIMULIB_LSM9DS1_GYRO_SAMPLERATE) == 0) {
+            m_LSM9DS1GyroSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS1_GYRO_FSR) == 0) {
+            m_LSM9DS1GyroFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS1_GYRO_HPF) == 0) {
+            m_LSM9DS1GyroHpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS1_GYRO_BW) == 0) {
+            m_LSM9DS1GyroBW = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS1_ACCEL_SAMPLERATE) == 0) {
+            m_LSM9DS1AccelSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS1_ACCEL_FSR) == 0) {
+            m_LSM9DS1AccelFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS1_ACCEL_LPF) == 0) {
+            m_LSM9DS1AccelLpf = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS1_COMPASS_SAMPLERATE) == 0) {
+            m_LSM9DS1CompassSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_LSM9DS1_COMPASS_FSR) == 0) {
+            m_LSM9DS1CompassFsr = atoi(val);
+
+        //  BMX055 settings
+
+        } else if (strcmp(key, RTIMULIB_BMX055_GYRO_SAMPLERATE) == 0) {
+            m_BMX055GyroSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_BMX055_GYRO_FSR) == 0) {
+            m_BMX055GyroFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_BMX055_ACCEL_SAMPLERATE) == 0) {
+            m_BMX055AccelSampleRate = atoi(val);
+        } else if (strcmp(key, RTIMULIB_BMX055_ACCEL_FSR) == 0) {
+            m_BMX055AccelFsr = atoi(val);
+        } else if (strcmp(key, RTIMULIB_BMX055_MAG_PRESET) == 0) {
+            m_BMX055MagPreset = atoi(val);
+
+        //  Handle unrecognized key
+
+        } else {
+            HAL_ERROR1("Unrecognized key in settings file: %s\n", buf);
+        }
+    }
+    HAL_INFO1("Settings file %s loaded\n", m_filename);
+    fclose(m_fd);
+}
+
 RTIMUSettings::RTIMUSettings(const char *productType)
 {
     if ((strlen(productType) > 200) || (strlen(productType) == 0)) {
