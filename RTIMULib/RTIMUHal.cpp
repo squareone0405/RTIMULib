@@ -72,7 +72,8 @@ bool RTIMUHal::HALOpen()
             return false;
         }
 
-        sprintf(buf, "/dev/spidev%d.%d", m_SPIBus, m_SPISelect);
+        //sprintf(buf, "/dev/spidev%d.%d", m_SPIBus, m_SPISelect);
+        sprintf(buf, "/dev/spidev1.0");
         m_SPI = open(buf, O_RDWR);
         if (m_SPI < 0) {
             HAL_ERROR2("Failed to open SPI bus %d, select %d\n", m_SPIBus, m_SPISelect);
